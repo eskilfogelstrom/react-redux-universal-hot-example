@@ -1,22 +1,22 @@
 import Express from 'express';
 import React from 'react';
 import ReactDOM from 'react-dom/server';
-import config from './config';
 import favicon from 'serve-favicon';
 import compression from 'compression';
 import httpProxy from 'http-proxy';
 import path from 'path';
-import createStore from './redux/create';
-import ApiClient from './helpers/ApiClient';
-import Html from './helpers/Html';
 import PrettyError from 'pretty-error';
 import http from 'http';
-
-import { match } from 'react-router';
+import { match, RouterContext } from 'react-router';
 import { syncHistoryWithStore } from 'react-router-redux';
 import { ReduxAsyncConnect, loadOnServer } from 'redux-async-connect';
 import createHistory from 'react-router/lib/createMemoryHistory';
 import {Provider} from 'react-redux';
+
+import config from './config';
+import createStore from './redux/create';
+import ApiClient from './helpers/ApiClient';
+import Html from './layouts/Html';
 import getRoutes from './routes';
 
 const targetUrl = 'http://' + config.apiHost + ':' + config.apiPort;
@@ -24,8 +24,7 @@ const pretty = new PrettyError();
 const app = new Express();
 const server = new http.Server(app);
 const proxy = httpProxy.createProxyServer({
-  target: targetUrl,
-  ws: true
+  target: targetUrl
 });
 
 app.use(compression());
@@ -36,14 +35,6 @@ app.use(Express.static(path.join(__dirname, '..', 'static')));
 // Proxy to API server
 app.use('/api', (req, res) => {
   proxy.web(req, res, {target: targetUrl});
-});
-
-app.use('/ws', (req, res) => {
-  proxy.web(req, res, {target: targetUrl + '/ws'});
-});
-
-server.on('upgrade', (req, socket, head) => {
-  proxy.ws(req, socket, head);
 });
 
 // added the error handling to avoid https://github.com/nodejitsu/node-http-proxy/issues/527
@@ -92,7 +83,7 @@ app.use((req, res) => {
       loadOnServer({...renderProps, store, helpers: {client}}).then(() => {
         const component = (
           <Provider store={store} key="provider">
-            <ReduxAsyncConnect {...renderProps} />
+            <ReduxAsyncConnect {...renderProps}/>
           </Provider>
         );
 
